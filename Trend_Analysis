@@ -1,0 +1,191 @@
+Sub Trend_Report()
+
+'
+'WTD Trend Layout
+'
+
+Dim accountName, percent, wkNum, year, dayText, prevDayText, targetSheet, currentSheet, ref, laundry, dish, oven, mwo As String
+Dim lastRow, lastCol As Long
+Dim dateVal As Date
+Dim i As Integer
+Dim catSplit As Boolean
+
+'Variables
+Sheets("Data").Select
+wkNum = range("C4").Value
+dayText = range("C5").Value
+prevDayText = range("C6").Value
+accountName = range("C7").Value
+year = range("C8").Value
+percent = range("C9").Value
+If range("B9").Value = "Overall" Then
+    catSplit = True
+Else
+    catSplit = False
+End If
+
+If catSplit Then
+    ref = range("C10").Value
+    laundry = range("C11").Value
+    dish = range("C12").Value
+    oven = range("C13").Value
+    mwo = range("C14").Value
+End If
+
+'Actuals PY Tab
+targetSheet = "Sell Out PY"
+currentSheet = "Actuals PY"
+Sheets(currentSheet).Select
+If range("A1").Value <> "Category" Then
+    If range("F1").Value = "Document Date" Then
+        Columns("F:F").Select
+        Selection.Delete Shift:=xlToLeft
+    End If
+    range("A:C").Select
+    Selection.Delete Shift:=xlToLeft
+    Rows("2:4").Select
+    Selection.Delete Shift:=xlUp
+    range("A1").Value = "Category"
+    range("B1").Value = "Material"
+    lastRow = Cells(Rows.Count, 1).End(xlUp).Row
+    Rows(lastRow).Select
+    Selection.Delete Shift:=xlUp
+    Columns("B:B").Select
+    GoSub Copy_Right
+    Sheets(targetSheet).Select
+    GoSub Column_Paste
+    GoSub Check_Formulas
+End If
+
+'Raw Setup
+Sheets("Raw").Select
+If range("F1").Value = "Document Date" Then
+    Columns("F:F").Select
+    Selection.Delete Shift:=xlToLeft
+End If
+lastCol = Application.WorksheetFunction.CountIf(range("1:1"), "<>")
+If lastCol < 13 Then
+    Columns(lastCol).Select
+    For i = lastCol To 12
+        Selection.Insert Shift:=xlToRight, CopyOrigin:=xlFormatFromLeftOrAbove
+    Next i
+    dateVal = DateValue(range("F1"))
+    For i = lastCol To 12
+        range("A1").Offset(0, i - 1).Value = dateVal + i - 6
+    Next i
+End If
+
+'Actuals Tab
+
+For i = 1 To ActiveWorkbook.Worksheets.Count
+    If InStr(LCase(ActiveWorkbook.Worksheets(i).Name), "actuals") >= 1 And InStr(LCase(ActiveWorkbook.Worksheets(i).Name), "to") >= 1 Then
+        targetSheet = ActiveWorkbook.Worksheets(i).Name
+        Exit For
+    End If
+Next i
+Sheets("Raw").Select
+Columns("D:D").Select
+GoSub Copy_Right
+GoSub Reset_Cells
+Sheets(targetSheet).Select
+range("A1").Select
+ActiveSheet.Paste
+Rows("2:4").Select
+Selection.Delete Shift:=xlUp
+range("A1").Value = "Category"
+range("B1").Value = "Material"
+lastRow = Cells(Rows.Count, 1).End(xlUp).Row
+Rows(lastRow).Select
+Selection.Delete Shift:=xlUp
+If dayText = "SAT" Then
+    Sheets(targetSheet).Name = "WK" & wkNum - 1 & " SUN TO " & dayText & " ACTUALS"
+    targetSheet = "WK" & wkNum - 1 & " SUN TO " & dayText & " ACTUALS"
+Else
+    Sheets(targetSheet).Name = "WK" & wkNum & " SUN TO " & dayText & " ACTUALS"
+    targetSheet = "WK" & wkNum & " SUN TO " & dayText & " ACTUALS"
+End If
+GoSub Reset_Cells
+
+'Sales By SKU Tab
+currentSheet = "SALES BY SKU"
+Sheets(targetSheet).Select
+Columns("A:A").Select
+GoSub Copy_Right
+Sheets(currentSheet).Select
+GoSub Reset_Cells
+ActiveSheet.Paste
+GoSub Check_Formulas
+GoSub Reset_Cells
+
+'TREND BY SKU
+currentSheet = "TREND BY SKU"
+Sheets(currentSheet).Select
+lastRow = Cells(Rows.Count, 1).End(xlUp).Row
+lastCol = Cells(Rows.Count, 5).End(xlUp).Row
+If lastRow > lastCol Then
+    range("E" & lastCol & ":I" & lastRow).Select
+    Selection.FillDown
+ElseIf lastCol > lastRow Then
+    Rows(lastRow + 1).Select
+    range(Selection, Selection.End(xlDown)).Select
+    Selection.Delete Shift:=xlUp
+End If
+GoSub Check_Formulas
+GoSub Reset_Cells
+
+'Daily Report
+targetSheet = "SALES BY SKU"
+currentSheet = accountName & " Daily Report"
+Sheets(targetSheet).Select
+range("C1:I1").Select
+Application.CutCopyMode = False
+Selection.Copy
+Sheets(currentSheet).Select
+range("E3").Select
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+    :=False, Transpose:=False
+If dayText = "SAT" Then
+    range("A2").Value = year & wkNum - 1
+Else
+    range("A2").Value = year & wkNum
+End If
+range("E2").Value = percent
+If catSplit Then
+    range("F2").Value = ref
+    range("G2").Value = laundry
+    range("H2").Value = dish
+    range("I2").Value = oven
+    range("J2").Value = mwo
+End If
+GoSub Reset_Cells
+Exit Sub
+
+Check_Formulas:
+    lastRow = Cells(Rows.Count, 1).End(xlUp).Row
+    lastCol = Cells(Rows.Count, 12).End(xlUp).Row
+    If lastRow > lastCol Then
+        If currentSheet = "TREND BY SKU" And catSplit Then
+            range("L" & lastCol & ":N" & lastRow).Select
+        Else
+            range("L" & lastCol & ":M" & lastRow).Select
+        End If
+        Selection.FillDown
+    End If
+Return
+
+Copy_Right:
+    range(Selection, Selection.End(xlToRight)).Select
+    Selection.Copy
+    GoSub Reset_Cells
+Return
+
+Column_Paste:
+    GoSub Reset_Cells
+    ActiveSheet.Paste
+    GoSub Reset_Cells
+
+Reset_Cells:
+    range("A1").Select
+Return
+
+End Sub
