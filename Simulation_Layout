@@ -1,0 +1,168 @@
+Sub Waterfall_Layout()
+'
+' Waterfall_Layout
+'
+
+Dim countRow As Long
+Dim accountColumn As Long
+Dim categoryColumn As Long
+Dim cell As range
+Dim rng As range
+Dim strArray() As String
+Dim str As Variant
+Dim rnge As String
+Dim endLayout As Integer
+
+endLayout = 4 'Line # after layout
+strArray = Split("Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec,Total", ",")
+
+'Setup
+For Each tabLookup In Worksheets
+    If tabLookup.Name = "x2" Or tabLookup.Name = "X1" Or tabLookup.Name = "x3" Or tabLookup.Name = "Others" Then
+        Sheets(tabLookup.Name).Select
+        countRow = Cells(Rows.Count, 3).End(xlUp).Row
+        range("A2:A" & countRow).Select
+        Selection.FillDown
+        Rows(countRow + 1).Select
+        range(Selection, Selection.End(xlDown)).Select
+        Selection.Clear
+        Set rng = range("A1:" & Cells(1, Cells(1, Columns.Count).End(xlToLeft).Column).Address)
+        For countRow = rng.Cells.Count To 1 Step -1
+            rng.Item(countRow).Select
+            For Each str In strArray
+                If rng.Item(countRow).Value = str Then
+                    Columns(rng.Item(countRow).Column).Select
+                    Selection.Delete Shift:=xlToLeft
+                    Exit For
+                End If
+            Next
+        Next
+    ElseIf tabLookup.Name = "x4 Data" Then
+        Sheets(tabLookup.Name).Select
+        Rows(endLayout + 1).Select
+        range(Selection, Selection.End(xlDown)).Select
+        Selection.Clear
+        Columns(10).Select
+        range(Selection, Selection.End(xlToRight)).Select
+        Selection.Clear
+    End If
+Next
+        
+'BEGIN x3 Tab / Header Copy to x4 Data
+Sheets("x3").Select
+range("C1").Select
+range(Selection, Selection.End(xlToRight)).Select
+Selection.Copy
+range("A1").Select
+Sheets("x4 Data").Select
+range("D1").Select
+ActiveSheet.Paste
+Set rng = range("A1:" & Cells(endLayout - 1, Cells(1, Columns.Count).End(xlToLeft).Column).Address)
+For Each cell In rng
+    If cell.Value = "" Then cell.Value = "0"
+Next
+'END x3 Tab / Header Copy to x4 Data
+
+        
+For Each tabLookup In Worksheets
+    If tabLookup.Name = "x2" Or tabLookup.Name = "X1" Or tabLookup.Name = "STO" Or tabLookup.Name = "x3" Or tabLookup.Name = "Others" Then
+        Sheets(tabLookup.Name).Select
+        'x2 Tab Setup
+        If tabLookup.Name = "x2" Then
+            accountColumn = Application.Match("Account", range("A1:" & Cells(1, Cells(1, Columns.Count).End(xlToLeft).Column).Address), 0)
+            categoryColumn = Application.IfError(Application.Match("Category", range("A1:" & Cells(1, Cells(1, Columns.Count).End(xlToLeft).Column).Address), 0), 0)
+            If accountColumn <> 5 And categoryColumn <> 0 Then
+                Columns(categoryColumn).Select
+                Selection.Delete Shift:=xlToLeft
+                Columns(accountColumn).Select
+                Selection.Cut
+                Columns(accountColumn + 2).Select
+                Selection.Insert Shift:=xlToRight
+            End If
+        'Copy Data
+        ElseIf tabLookup.Name = "STO" Then
+            Sheets(tabLookup.Name).Select
+            ActiveSheet.PivotTables("STO").PivotCache.Refresh
+            ActiveSheet.PivotTables("STO").ClearAllFilters
+            ActiveSheet.PivotTables("STO").PivotFields("Storage Location").ClearAllFilters
+            ActiveSheet.PivotTables("STO").PivotFields("Storage Location").CurrentPage = _
+                "WC10"
+            With ActiveSheet.PivotTables("STO").PivotFields("STO Transit")
+                .PivotItems("0").Visible = False
+            End With
+            With ActiveSheet.PivotTables("STO").PivotFields("Plant")
+                .PivotItems("S364").Visible = False
+                .PivotItems("S365").Visible = False
+                .PivotItems("(blank)").Visible = False
+                .PivotItems("S356").Visible = False
+                .PivotItems("S361").Visible = False
+            End With
+            countRow = Cells(Rows.Count, 1).End(xlUp).Row
+            Rows(countRow + 1).Select
+            range(Selection, Selection.End(xlDown)).Select
+            Selection.Clear
+            range("D5:K" & countRow - 1).Select
+            Selection.FillDown
+            Calculate
+        ElseIf tabLookup.Name = "Others" Then
+            Set rng = range("F2:" & Cells(Cells(Rows.Count, 3).End(xlUp).Row, Cells(1, Columns.Count).End(xlToLeft).Column).Address)
+                For Each cell In rng
+                    If cell.Value > "0" Then cell.Value = -Abs(cell.Value)
+                Next
+        End If
+        
+        If tabLookup.Name <> "STO" Then
+            range("A2").Select
+            range(Selection, Selection.End(xlToRight)).Select
+            range(Selection, Selection.End(xlDown)).Select
+        End If
+        
+        Selection.Copy
+        range("A1").Select
+        Sheets("x4 Data").Select
+        countRow = Cells(Rows.Count, 3).End(xlUp).Row
+        If countRow = 4 Then
+            range("B" & countRow).Select
+        Else
+            range("B" & countRow + 1).Select
+        End If
+        
+        'Paste Data
+        If tabLookup.Name = "STO" Then
+            Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+            :=False, Transpose:=False
+            Set rng = range("J" & countRow + 1 & ":" & Cells(Cells(Rows.Count, 2).End(xlUp).Row, Cells(1, Columns.Count).End(xlToLeft).Column).Address)
+            For Each cell In rng
+                If cell.Value = "" Then cell.Value = "0"
+            Next
+            Rows(countRow).Select
+            countRow = Cells(Rows.Count, 3).End(xlUp).Row
+            Selection.Copy
+            range(Selection, Rows(countRow)).PasteSpecial Paste:=xlPasteFormats, Operation:=xlNone, _
+                SkipBlanks:=False, Transpose:=False
+            Application.CutCopyMode = False
+        Else
+            ActiveSheet.Paste
+        End If
+    End If
+Next
+
+Sheets("x4 Data").Select
+countRow = Cells(Rows.Count, 2).End(xlUp).Row
+range("A" & endLayout & ":A" & countRow).Select
+Selection.FillDown
+range("A1").Select
+Calculate
+
+countRow = Cells(Rows.Count, 1).End(xlUp).Row
+categoryColumn = Cells(1, Columns.Count).End(xlToLeft).Column
+rnge = "x4 Data!R1C1:R" & countRow & "C" & categoryColumn
+
+'Refresh Waterfall Pivot
+Sheets("x4 Pivot").Select
+ActiveSheet.PivotTables("pivotx4").ChangePivotCache ActiveWorkbook. _
+    PivotCaches.Create(SourceType:=xlDatabase, SourceData:=rnge, _
+    Version:=xlPivotTableVersion14)
+    
+
+End Sub
