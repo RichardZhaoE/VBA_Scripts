@@ -1,0 +1,30 @@
+Sub Cleanup()
+'
+' Delete Months and Totals
+'
+
+Dim str As Variant
+Dim strArray() As String
+strArray = Split("Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec,Total", ",")
+
+If range("B1").Value = "Confidential" Then
+    Rows("1:1").Select
+    Selection.Delete Shift:=xlUp
+    range("A:A").Select
+    Selection.Delete Shift:=xlToLeft
+End If
+Set rng = range("A1:" & Cells(1, Cells(1, Columns.Count).End(xlToLeft).Column).Address)
+For countRow = rng.Cells.Count To 1 Step -1
+    rng.Item(countRow).Select
+    For Each str In strArray
+        If rng.Item(countRow).Value = str Then
+            Columns(rng.Item(countRow).Column).Select
+            Selection.Delete Shift:=xlToLeft
+            Exit For
+        End If
+    Next
+Next
+
+range("A1").Select
+
+End Sub
