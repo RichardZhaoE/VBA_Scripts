@@ -1,0 +1,59 @@
+Sub Node_Export()
+'
+' Node Export
+'
+
+Dim str As Variant
+Dim strArray() As String
+Dim dir, currentWB As String
+strArray = Split("Node1,Node2,Node3,Node4,Node5,Node6,Node7", ",")
+Dim newWB As Workbook
+Dim lastRow, lastColumn, curRow As Long
+dir = "C:\Users\richard.zhao\Desktop\Tasks\Sams\846\Upload\"
+
+'Null Variables
+currentWB = ActiveWorkbook.Name
+lastRow = 0
+lastColumn = 0
+
+For Each str In strArray
+    Sheets(str).Select
+    'Setup
+    If str = "Node1" Then
+        lastRow = Cells(Rows.Count, 1).End(xlUp).Row
+        lastColumn = Cells(1, Columns.Count).End(xlToLeft).Column
+    End If
+    curRow = Cells(Rows.Count, 1).End(xlUp).Row
+    If curRow > lastRow Then
+        Rows(lastRow + 1).Select
+        range(Selection, Selection.End(xlDown)).Select
+        Selection.Delete Shift:=xlUp
+    ElseIf curRow < lastRow Then
+        range("A" & curRow).Select
+        range(Selection, Selection.End(xlToRight)).Select
+        Selection.AutoFill Destination:=range("A" & curRow & ":" & range("A1").Offset(lastRow - 1, lastColumn - 1).Address), Type:=xlFillDefault
+    End If
+    'End Setup
+    
+    'Create New & Save
+    range("A1").Select
+    range(Selection, Selection.End(xlToRight)).Select
+    range(Selection, Selection.End(xlDown)).Select
+    Selection.Copy
+    Set newWB = Workbooks.Add
+    newWB.Activate
+    Sheets(ActiveSheet.Name).Name = str
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+    Application.CutCopyMode = False
+    Application.DisplayAlerts = False
+    ActiveWorkbook.SaveAs Filename:= _
+        dir & str & ".xlsx", FileFormat _
+        :=xlOpenXMLWorkbook, CreateBackup:=False
+    ActiveWindow.Close
+    Application.DisplayAlerts = True
+    Windows(currentWB).Activate
+    range("A2").Select
+Next
+
+End Sub
