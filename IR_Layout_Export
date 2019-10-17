@@ -1,0 +1,133 @@
+Sub IR_Layout_Export()
+'
+' IR Export Macro
+'
+
+'
+Dim WS As Worksheet
+Dim wsName As String
+Dim rng, cell, categories, cat As range
+Dim lastRow, lastRow2, lastColumn, roadMapCol, calcCol, numLines, categoryCount As Long
+
+
+    'Setup
+    categoryCount = Application.WorksheetFunction.CountIf(range("Settings!D:D"), "<>")
+    Set categories = range("Settings!D2:D" & categoryCount)
+    ActiveWorkbook.RefreshAll
+    numLines = Application.WorksheetFunction.Max(range("Settings!E:E"))
+    Sheets("HA Roadmap").Select
+    roadMapCol = Cells(7, Columns.Count).End(xlToLeft).Column
+    calcCol = roadMapCol - range("Calculations!D1").Value
+    
+    'Calculations Tab Setup
+    Sheets("Calculations").Select
+    range("E1:E4").Select
+    Selection.AutoFill Destination:=range("E1:" & Cells(4, 4 + calcCol).Address), Type:=xlFillDefault
+    range("E1:" & Cells(4, 4 + calcCol).Address).Select
+    range("C4:" & Cells(4 + numLines, 4 + calcCol).Address).Select
+    Selection.FillDown
+    
+    Columns(Split(Cells(1, 5 + calcCol).Address(True, False), "$")(0)).Select
+    range(Selection, Selection.End(xlToRight)).Select
+    Selection.Clear
+    Rows(5 + numLines & ":" & 5 + numLines).Select
+    range(Selection, Selection.End(xlDown)).Select
+    Selection.Clear
+ 
+    'IR Tab Setup
+    Sheets("IR").Select
+    
+    Columns(Split(Cells(1, ((calcCol + 1) / 2) + 4).Address(True, False), "$")(0)).Select
+    range(Selection, Selection.End(xlToRight)).Select
+    Selection.Clear
+    Rows(6 + numLines & ":" & 6 + numLines).Select
+    range(Selection, Selection.End(xlDown)).Select
+    Selection.Clear
+    
+    range("E1:E5").Select
+    Selection.AutoFill Destination:=range("E1:" & Cells(5, ((calcCol + 1) / 2) + 3).Address), Type:=xlFillDefault
+    range("E1:" & Cells(5, ((calcCol + 1) / 2) + 3).Address).Select
+    
+    lastColumn = Cells(1, Columns.Count).End(xlToLeft).Column
+    range("A5:A" & 5 + numLines).Select
+    Selection.FillDown
+    range("C5:" & Cells(5 + numLines, lastColumn).Address).Select
+    Selection.FillDown
+    
+    Rows("4:4").Select
+    Selection.AutoFilter
+    Selection.AutoFilter
+
+    'End Setup
+    
+    For Each cat In categories
+        'Change Pivot Filter
+        Sheets("Calculations").Select
+        ActiveSheet.PivotTables("Calculations").PivotFields("Category").CurrentPage = _
+        cat.Value
+        Sheets("IR").Select
+        ActiveSheet.PivotTables("IR").PivotFields("Category").CurrentPage = _
+        cat.Value
+    
+        wsName = range("IR!C2").Text
+        'Delte Sheet if Exists
+        For Each tabLookup In Worksheets
+            If tabLookup.Name = wsName Then
+            Application.DisplayAlerts = False
+            Sheets(wsName).Delete
+            Application.DisplayAlerts = True
+            End If
+        Next
+        
+        'Create New Sheet
+        Sheets("IR").Select
+        range("B4").Select
+        range(Selection, Selection.End(xlToRight)).Select
+        range(Selection, Selection.End(xlDown)).Select
+        Selection.Copy
+        Set WS = Sheets.Add(After:=Sheets(Sheets.Count))
+        WS.Name = wsName
+        Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+            :=False, Transpose:=False
+        range("A2").Select
+        range(Selection, Selection.End(xlDown)).Select
+        Application.CutCopyMode = False
+        Selection.Copy
+        lastRow = Cells(Rows.Count, 1).End(xlUp).Row
+        lastColumn = Cells(1, Columns.Count).End(xlToLeft).Column
+        range("A" & lastRow).Offset(1, 0).Select
+        Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+            :=False, Transpose:=False
+        lastRow2 = Cells(Rows.Count, 1).End(xlUp).Row
+        range("B" & lastRow).Offset(1, 0).Select
+        ActiveCell.FormulaR1C1 = "Bundle/other"
+        range("B" & lastRow + 1 & ":B" & lastRow2).Select
+        Selection.FillDown
+        Set rng = range("C" & lastRow & ":" & Cells(lastRow2, lastColumn).Address)
+        For Each cell In rng
+            If cell.Value = "" Then cell.Value = "0"
+        Next
+        Set rng = range("A1:" & Cells(1, lastColumn).Address)
+        For Each cell In rng
+            cell.Select
+            ActiveCell.FormulaR1C1 = cell.Value
+        Next
+        Selection.AutoFilter
+        ActiveWorkbook.Worksheets(wsName).AutoFilter.Sort.SortFields.Clear
+        ActiveWorkbook.Worksheets(wsName).AutoFilter.Sort.SortFields.Add Key:=range( _
+        "A1:A" & lastRow2), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:= _
+        xlSortNormal
+        With ActiveWorkbook.Worksheets(wsName).AutoFilter.Sort
+            .Header = xlYes
+            .MatchCase = False
+            .Orientation = xlTopToBottom
+            .SortMethod = xlPinYin
+            .Apply
+        End With
+        range("C2").Select
+        range(Selection, Selection.End(xlToRight)).Select
+        range(Selection, Selection.End(xlDown)).Select
+        Selection.NumberFormat = "$#,##0"
+        range("A1").Select
+    Next
+End Sub
